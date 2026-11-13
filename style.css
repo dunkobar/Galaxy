@@ -1,0 +1,157 @@
+:root {
+    color-scheme: dark;          /* dark scrollbars and form controls */
+    --bg: #0b1020;
+    --panel: #121a30;
+    --panel-2: #17203a;
+    --border: #27314f;
+    --text: #e6edf9;
+    --muted: #8b9ac0;
+    --accent: #5fb4ff;
+    --danger: #ff7b7b;
+    --sidebar-w: 280px;
+  }
+  
+  * { box-sizing: border-box; }
+  
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  
+  #app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+  }
+  
+  .muted { color: var(--muted); font-weight: normal; }
+  
+  /* ---------- toolbar ---------- */
+  #toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  #toolbar .spacer { flex: 1; }
+  
+  button {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:focus-visible, input:focus-visible, #resizer:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.toggle[aria-pressed="true"],
+  #btn-sidebar[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: #1a2c4d;
+  }
+  
+  /* ---------- main area ---------- */
+  #main {
+    display: flex;
+    min-height: 0;          /* lets the plot shrink instead of overflowing */
+  }
+  
+  #sidebar {
+    width: var(--sidebar-w);
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    overflow: hidden;
+  }
+  #sidebar section { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  #sidebar section.grow {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #sidebar h2 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #galaxy-name { font-size: 16px; overflow-wrap: anywhere; }
+  
+  #star-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+  }
+  #star-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 4px;
+    border-radius: 4px;
+  }
+  #star-list li:hover { background: var(--panel-2); }
+  #star-list .name { overflow-wrap: anywhere; }
+  #star-list .coords { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #star-list .empty { color: var(--muted); font-style: italic; display: block; }
+  
+  .dev .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .dev input[type="number"] {
+    width: 80px;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 6px;
+  }
+  
+  #resizer {
+    width: 6px;
+    flex: none;
+    cursor: col-resize;
+    background: var(--border);
+    touch-action: none;
+  }
+  #resizer:hover { background: var(--accent); }
+  
+  #plot { flex: 1; min-width: 0; background: var(--bg); }
+  
+  /* sidebar hidden */
+  #app.sidebar-hidden #sidebar,
+  #app.sidebar-hidden #resizer { display: none; }
+  
+  /* ---------- bottom panel ---------- */
+  #bottom {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+    padding: 8px 12px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+  }
+  #stats {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 22px;
+  }
+  .stat { display: flex; flex-direction: column; min-width: 80px; }
+  .stat .label { color: var(--muted); font-size: 12px; }
+  .stat .value { font-size: 16px; font-variant-numeric: tabular-nums; }
+  
+  #message.error { color: var(--danger); }
+  #algo { text-align: right; font-size: 12px; align-self: end; }
+  
+  @media (max-width: 700px) {
+    :root { --sidebar-w: 200px; }
+  }

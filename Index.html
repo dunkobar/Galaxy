@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galaxy Explorer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Top toolbar. Disabled buttons arrive in later steps (5b-5d). -->
+    <header id="toolbar" role="toolbar" aria-label="Main toolbar">
+      <button id="btn-new" disabled title="Coming in step 5c">New</button>
+      <button id="btn-save" disabled title="Coming in step 5c">Save</button>
+      <button id="btn-load" disabled title="Coming in step 5c">Load</button>
+      <button id="btn-import" disabled title="Coming in step 5c">Import CSV</button>
+      <button id="btn-export" disabled title="Coming in step 5c">Export</button>
+      <span class="spacer"></span>
+      <button id="btn-mst" class="toggle" aria-pressed="true"
+              title="Show or hide the minimum spanning tree">Show tree</button>
+      <button id="btn-reset" title="Return the 3D view to its starting angle and zoom">Reset view</button>
+      <button id="btn-sidebar" aria-pressed="true" title="Show or hide the sidebar">Sidebar</button>
+    </header>
+
+    <div id="main">
+      <aside id="sidebar" aria-label="Galaxy sidebar">
+        <section>
+          <h2>Galaxy</h2>
+          <div id="galaxy-name">Untitled</div>
+        </section>
+
+        <section class="grow">
+          <h2>Stars <span id="star-count" class="muted"></span></h2>
+          <ul id="star-list"></ul>
+        </section>
+
+        <section class="dev">
+          <h2>Demo galaxy <span class="muted">(temporary test tool)</span></h2>
+          <div class="row">
+            <label for="demo-count">Stars</label>
+            <input id="demo-count" type="number" min="0" max="1000" step="1" value="60">
+            <button id="btn-demo" disabled>Load demo</button>
+            <button id="btn-clear" disabled>Clear</button>
+          </div>
+        </section>
+      </aside>
+
+      <div id="resizer" role="separator" aria-orientation="vertical" tabindex="0"
+           title="Drag to resize (or use the left/right arrow keys)"></div>
+
+      <main id="plot" aria-label="3D view of the galaxy"></main>
+    </div>
+
+    <!-- Bottom panel: statistics and status -->
+    <footer id="bottom">
+      <div id="stats" aria-label="Galaxy statistics"></div>
+      <div id="message" role="status" aria-live="polite">Loading Python&hellip;</div>
+      <div id="algo" class="muted"></div>
+    </footer>
+  </div>
+
+  <!-- Versions are pinned here. If one fails to load, the page says so. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
+  <script src="https://cdn.plot.ly/plotly-3.7.0.min.js" charset="utf-8"></script>
+  <script src="render.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
