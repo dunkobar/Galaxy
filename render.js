@@ -1,6 +1,6 @@
 /* Pure drawing helpers: they turn a snapshot from bridge.py into Plotly
- * traces/layout and into text. No DOM access here, so they are tested in
- * Node (test_render.js). In the browser they are plain global functions. */
+ * traces/layout and into text. No DOM access here, so they can be used
+ * independently from the page. In the browser they are plain global functions. */
 
 var DEFAULT_CAMERA = {
     eye: { x: 1.5, y: 1.5, z: 1.2 },
@@ -9,11 +9,12 @@ var DEFAULT_CAMERA = {
   };
   
   var COLORS = {
-    background: '#0b1020',
-    grid: '#27314f',
-    text: '#9fb0d0',
-    star: '#cfe3ff',
-    edge: '#6f8fcf',
+    background: '#f7f5ef',
+    grid: '#dedbd2',
+    text: '#65645e',
+    star: '#69735f',
+    selected: '#b05d3b',
+    edge: '#a5aa9a',
   };
   
   /* Number -> text; null (e.g. "shortest edge" with fewer than 2 stars) -> a dash. */
@@ -46,6 +47,7 @@ var DEFAULT_CAMERA = {
    * separate edges are not joined. */
   function buildTraces(snap, opts) {
     var showMst = !opts || opts.showMst !== false;
+    var selected = opts && opts.selected;
     var ex = [], ey = [], ez = [];
     if (showMst) {
       for (var e = 0; e < snap.edges.length; e++) {
@@ -62,6 +64,13 @@ var DEFAULT_CAMERA = {
       line: { color: COLORS.edge, width: 2 },
       opacity: 0.7, hoverinfo: 'skip', showlegend: false,
     };
+    var sizes = [];
+    var colors = [];
+    for (var i = 0; i < snap.stars.length; i++) {
+      var on = selected != null && snap.stars[i].name === selected;
+      sizes.push(on ? 10 : 4);
+      colors.push(on ? COLORS.selected : COLORS.star);
+    }
     var starTrace = {
       type: 'scatter3d', mode: 'markers', name: 'Stars',
       x: snap.stars.map(function (s) { return s.x; }),
@@ -69,7 +78,7 @@ var DEFAULT_CAMERA = {
       z: snap.stars.map(function (s) { return s.z; }),
       text: snap.stars.map(hoverText),
       hovertemplate: '%{text}<extra></extra>',
-      marker: { size: 4, color: COLORS.star },
+      marker: { size: sizes, color: colors },
       showlegend: false,
     };
     return [edgeTrace, starTrace];
@@ -96,7 +105,7 @@ var DEFAULT_CAMERA = {
       margin: { l: 0, r: 0, t: 0, b: 0 },
       showlegend: false,
       uirevision: 'keep',
-      hoverlabel: { bgcolor: '#17203a', font: { color: '#e6edf9' } },
+      hoverlabel: { bgcolor: '#fffefa', font: { color: '#34342f' } },
       scene: {
         aspectmode: 'data',           // true distances, so the tree looks right
         dragmode: 'orbit',            // left-drag rotates; wheel zooms; right-drag pans

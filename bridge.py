@@ -4,16 +4,17 @@ Runs inside Pyodide in the browser, but is plain Python, so it is tested
 with unittest like everything else. Every method returns a JSON *string*
 (simple and safe to pass across the Python/JavaScript boundary).
 
-Step 5a: snapshot, demo galaxy, clear. Step 5b: add/remove/edit stars.
-Later steps add cluster count, save/load.
+The session exposes snapshots, demo data, star editing, and CSV save/load/import
+to the browser UI.
 """
 
 import json
 import random
 from dataclasses import asdict
 
-from analysis import clamp_k, cluster_labels, compute_stats
-from galaxy import Galaxy, GalaxyError
+from Analysis import clamp_k, cluster_labels, compute_stats
+from Galaxy import Galaxy, GalaxyError
+from storage import StorageError, export_csv_text, import_csv_text, load_csv_text
 
 MAX_DEMO_STARS = 1000
 
@@ -71,8 +72,37 @@ class Session:
     def remove_star(self, name):
         return self._change(self.galaxy.remove_star, name)
 
-    def edit_star(self, name, x, y, z):
-        return self._change(self.galaxy.edit_star, name, x, y, z)
+    def edit_star(self, name, x, y, z, new_name=None):
+        return self._change(self.galaxy.edit_star, name, x, y, z, new_name)
+
+    def export_csv(self):
+        return _ok(csv=export_csv_text(self.galaxy))
+
+    def import_csv(self, text):
+        working = Galaxy(self.galaxy.name)
+        for name, (x, y, z) in self.galaxy.stars():
+            working.add_star(name, x, y, z)
+        try:
+            result = import_csv_text(working, text)
+        except StorageError as e:
+            return _err(str(e))
+        if result.added:
+            self.galaxy = working
+            self._tree = None
+        return _ok(
+            added=result.added,
+            skipped=[{"line": line, "error": reason}
+                     for line, reason in result.skipped],
+        )
+
+    def load_csv(self, text, name="Untitled"):
+        try:
+            galaxy, result = load_csv_text(text, name)
+        except StorageError as e:
+            return _err(str(e))
+        self.galaxy = galaxy
+        self._tree = None
+        return _ok(loaded=result.added)
 
     def load_demo(self, count, seed=1):
         """Replace the galaxy with `count` random stars in a few clumps.

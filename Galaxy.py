@@ -72,15 +72,28 @@ class Galaxy:
             raise GalaxyError(f"No star named '{name}'.")
         del self._stars[name]
 
-    def edit_star(self, name, x, y, z):
-        """Move an existing star. Same duplicate rule as add_star."""
+    def edit_star(self, name, x, y, z, new_name=None):
+        """Move or rename an existing star, enforcing the normal star rules."""
         if name not in self._stars:
             raise GalaxyError(f"No star named '{name}'.")
+        if new_name is None:
+            new_name = name
+        else:
+            new_name = self._clean_name(new_name)
+        if new_name != name and new_name in self._stars:
+            raise GalaxyError(f"A star named '{new_name}' already exists.")
         coords = self._clean_coords(x, y, z)
         owner = self._owner_of(coords, ignore=name)
         if owner is not None:
             raise GalaxyError(f"Star '{owner}' is already at those coordinates.")
-        self._stars[name] = coords
+        if new_name == name:
+            self._stars[name] = coords
+        else:
+            self._stars = {
+                new_name if star_name == name else star_name:
+                    coords if star_name == name else star_coords
+                for star_name, star_coords in self._stars.items()
+            }
 
     # ---------- queries ----------
 

@@ -1,15 +1,8 @@
-"""Saving, loading and CSV import/export (step 3).
+"""CSV exchange and optional JSON file storage for galaxies.
 
-Design decisions:
-- One JSON file per galaxy, in a folder. The file name IS the galaxy name,
-  so renaming a galaxy is just renaming the file.
-- Galaxy names must be safe as file names and are unique ignoring case
-  (so the folder behaves the same on every operating system).
-- A corrupted or invalid file raises StorageError; it never produces a
-  half-loaded galaxy. Loading re-checks every star with the normal Galaxy
-  rules (unique names, no duplicate coordinates, finite numbers).
-- Saves are atomic: write a temp file, then replace the real one.
-- CSV format is name,x,y,z. Bad rows are skipped and reported.
+CSV uses the name,x,y,z columns. Import skips invalid rows with line-level
+reasons; loading into a new galaxy is transactional. JSON file storage remains
+available to non-browser callers.
 """
 
 import csv
@@ -20,7 +13,7 @@ import re
 import tempfile
 from dataclasses import dataclass, field
 
-from galaxy import Galaxy, GalaxyError
+from Galaxy import Galaxy, GalaxyError
 
 FORMAT_VERSION = 1
 MAX_NAME_LENGTH = 100
@@ -191,53 +184,85 @@ class ImportResult:
         return s
 
 
+def _import_csv_reader(galaxy, reader):
+    result = ImportResult()
+    first = True
+    for row in reader:
+        line = reader.line_num
+        if not row or all(c.strip() == "" for c in row):
+            continue
+        if first:
+            first = False
+            if (len(row) == 4 and
+                    [c.strip().lower() for c in row] == ["name", "x", "y", "z"]):
+                continue
+        if len(row) != 4:
+            result.skipped.append(
+                (line, f"expected 4 columns, found {len(row)}"))
+            continue
+        try:
+            galaxy.add_star(*row)
+            result.added += 1
+        except GalaxyError as e:
+            result.skipped.append((line, str(e)))
+    return result
+
+
+def import_csv_text(galaxy, text):
+    """Add CSV text to `galaxy`, skipping invalid rows and reporting reasons."""
+    if not isinstance(text, str):
+        raise StorageError("CSV content must be text.")
+    if text.startswith("\ufeff"):
+        text = text[1:]
+    try:
+        return _import_csv_reader(galaxy, csv.reader(io.StringIO(text, newline="")))
+    except csv.Error:
+        raise StorageError("CSV content is not a readable CSV text file.")
+
+
 def import_csv(galaxy, path):
     """Add stars from a name,x,y,z CSV file to `galaxy`.
 
     A first row that is exactly name,x,y,z (any case) is a header. Blank
-    lines are ignored. Any other row that cannot be added (wrong number of
-    columns, bad number, duplicate name or coordinates) is skipped and
-    reported with its line number. Stars added before an unreadable part of
-    the file stay added.
+    lines are ignored. Invalid rows are skipped and reported with their
+    line numbers.
 
     Each add_star is O(size of galaxy), so importing m rows into a galaxy
     of n stars is O(m * (n + m)).
     """
-    result = ImportResult()
     try:
         with open(path, newline="", encoding="utf-8-sig") as f:
-            reader = csv.reader(f)
-            first = True
-            for row in reader:
-                line = reader.line_num
-                if not row or all(c.strip() == "" for c in row):
-                    continue
-                if first:
-                    first = False
-                    if (len(row) == 4 and
-                            [c.strip().lower() for c in row] == ["name", "x", "y", "z"]):
-                        continue
-                if len(row) != 4:
-                    result.skipped.append(
-                        (line, f"expected 4 columns, found {len(row)}"))
-                    continue
-                try:
-                    galaxy.add_star(*row)
-                    result.added += 1
-                except GalaxyError as e:
-                    result.skipped.append((line, str(e)))
+            return _import_csv_reader(galaxy, csv.reader(f))
     except OSError as e:
         raise StorageError(f"Could not read '{path}': {e.strerror or e}")
     except (UnicodeDecodeError, csv.Error):
         raise StorageError(f"'{path}' is not a readable CSV text file.")
-    return result
 
 
-def export_csv(galaxy, path):
-    """Write the galaxy as name,x,y,z with a header row."""
+def load_csv_text(text, name="Untitled"):
+    """Load CSV text as a new galaxy, rejecting the entire file if a row is bad."""
+    name = check_galaxy_name(name)
+    galaxy = Galaxy(name)
+    result = import_csv_text(galaxy, text)
+    if result.skipped:
+        details = "; ".join(
+            f"line {line}: {reason}" for line, reason in result.skipped[:5])
+        more = f"; and {len(result.skipped) - 5} more" if len(result.skipped) > 5 else ""
+        raise StorageError(
+            f"CSV was not loaded: {len(result.skipped)} invalid row(s). {details}{more}")
+    return galaxy, result
+
+
+def export_csv_text(galaxy):
+    """Return the galaxy as CSV text with a name,x,y,z header row."""
     buf = io.StringIO(newline="")
     writer = csv.writer(buf)
     writer.writerow(["name", "x", "y", "z"])
     for name, (x, y, z) in galaxy.stars():
         writer.writerow([name, repr(x), repr(y), repr(z)])
-    _atomic_write(path, buf.getvalue())
+    return buf.getvalue()
+
+
+def export_csv(galaxy, path):
+    """Write the galaxy as name,x,y,z with a header row."""
+    _atomic_write(path, export_csv_text(galaxy))
